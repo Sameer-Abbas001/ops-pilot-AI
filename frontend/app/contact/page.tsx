@@ -1,0 +1,205 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  CheckCircle2,
+  Github,
+  GraduationCap,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Phone,
+  Send,
+  Shield,
+  User,
+} from "lucide-react";
+import NavBar from "../components/NavBar";
+import PageFooter from "../components/PageFooter";
+
+export default function ContactPage() {
+  const [submitted, setSubmitted] = useState(false);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitted(true);
+  }
+
+  return (
+    <div className="min-h-screen bg-void grid-bg text-chrome">
+      <NavBar variant="inner" />
+
+      <main className="max-w-6xl mx-auto px-6 py-16 pt-24 grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-8">
+        <motion.section
+          initial={{ opacity: 0, x: -18 }}
+          animate={{ opacity: 1, x: 0 }}
+        >
+          <div className="inline-flex items-center gap-2 px-3 py-1 border border-border-2 rounded text-xs text-chrome-dim mb-6 font-mono">
+            <Mail size={12} className="text-plasma" />
+            CONTACT
+          </div>
+
+          <h1 className="font-display text-4xl font-bold mb-4">
+            Talk to the Ops-Pilot team
+          </h1>
+          <p className="text-chrome-dim font-mono text-sm leading-relaxed mb-6">
+            Send integration questions, deployment issues, bug reports, or
+            feature requests. The form is local UI for now, so wire it to your
+            backend email or ticket endpoint when ready.
+          </p>
+
+          {/* Project Lead & Developer Details */}
+          <div className="bg-surface-1 border border-plasma/30 rounded-xl p-5 mb-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 bg-plasma/10 text-plasma border-b border-l border-plasma/20 px-3 py-0.5 text-[10px] font-mono uppercase tracking-wider rounded-bl">
+              Author & Maintainer
+            </div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-plasma/10 border border-plasma/30 flex items-center justify-center text-plasma">
+                <User size={20} />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-base text-chrome">Sameer Abbas</h3>
+                <p className="text-xs font-mono text-plasma">Software Engineer & Ops-Pilot Creator</p>
+              </div>
+            </div>
+            <div className="space-y-2 text-xs font-mono text-chrome-dim pt-3 border-t border-border-1">
+              <div className="flex items-center gap-2">
+                <Mail size={13} className="text-plasma shrink-0" />
+                <a href="mailto:sanagsa2028@gmail.com" className="hover:text-plasma transition-colors">
+                  sanagsa2028@gmail.com
+                </a>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone size={13} className="text-plasma shrink-0" />
+                <a href="tel:+917055573184" className="hover:text-plasma transition-colors">
+                  +91 70555-73184
+                </a>
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin size={13} className="text-plasma shrink-0" />
+                <span>Agra, Uttar Pradesh, India</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <GraduationCap size={13} className="text-plasma shrink-0" />
+                <span>B.Tech in IT • Hindustan College of Science and Technology</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              {
+                icon: MessageSquare,
+                title: "Incident workflow feedback",
+                text: "Share missing agent steps, confusing evidence, or operator needs.",
+              },
+              {
+                icon: Github,
+                title: "Repo Scanner setup",
+                text: "Ask about GitHub token scopes, repository format, and deployment metadata.",
+              },
+              {
+                icon: Shield,
+                title: "Production readiness",
+                text: "Discuss validation gates, audit trails, and remediation approval flows.",
+              },
+            ].map((item) => (
+              <div
+                key={item.title}
+                className="bg-surface-1 border border-border-1 rounded-xl p-5"
+              >
+                <item.icon size={18} className="text-plasma mb-3" />
+                <h2 className="font-display font-semibold mb-1">
+                  {item.title}
+                </h2>
+                <p className="text-sm text-chrome-dim font-mono leading-relaxed">
+                  {item.text}
+                </p>
+              </div>
+            ))}
+          </div>
+        </motion.section>
+
+        <motion.section
+          initial={{ opacity: 0, x: 18 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-surface-1 border border-border-1 rounded-xl p-6"
+        >
+          {submitted ? (
+            <div className="min-h-[420px] flex flex-col items-center justify-center text-center">
+              <CheckCircle2 size={42} className="text-plasma mb-4" />
+              <h2 className="font-display text-2xl font-bold mb-2">
+                Message captured
+              </h2>
+              <p className="text-chrome-dim font-mono text-sm max-w-md">
+                The UI is working. Connect this form to your backend contact
+                endpoint to send real messages.
+              </p>
+              <button
+                onClick={() => setSubmitted(false)}
+                className="mt-6 px-5 py-3 border border-border-2 rounded-lg text-sm font-mono text-chrome-dim hover:border-plasma hover:text-plasma transition-colors"
+              >
+                Send another
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono text-chrome-dim mb-2">
+                  Name
+                </label>
+                <input
+                  className="w-full bg-surface-2 border border-border-1 rounded-lg px-4 py-3 text-sm font-mono text-chrome focus:outline-none focus:border-plasma"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-chrome-dim mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  className="w-full bg-surface-2 border border-border-1 rounded-lg px-4 py-3 text-sm font-mono text-chrome focus:outline-none focus:border-plasma"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-chrome-dim mb-2">
+                  Topic
+                </label>
+                <select className="w-full bg-surface-2 border border-border-1 rounded-lg px-4 py-3 text-sm font-mono text-chrome focus:outline-none focus:border-plasma">
+                  <option>Integration help</option>
+                  <option>Bug report</option>
+                  <option>Feature request</option>
+                  <option>Production readiness</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-chrome-dim mb-2">
+                  Message
+                </label>
+                <textarea
+                  rows={8}
+                  className="w-full bg-surface-2 border border-border-1 rounded-lg px-4 py-3 text-sm font-mono text-chrome focus:outline-none focus:border-plasma resize-y"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-plasma text-void rounded-lg font-display font-bold hover:bg-plasma-dim transition-colors"
+              >
+                <Send size={16} />
+                Send Message
+              </button>
+            </form>
+          )}
+        </motion.section>
+      </main>
+      <PageFooter />
+    </div>
+  );
+}

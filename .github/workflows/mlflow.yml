@@ -1,0 +1,120 @@
+name: MLflow Experiment Tracking
+
+on:
+  workflow_dispatch:
+    inputs:
+      experiment_name:
+        description: "MLflow experiment name"
+        required: true
+        default: "ops-pilot-agent-eval"
+  # schedule:
+  #   - cron: "0 3 * * 0"
+
+jobs:
+  track-agent-evals:
+    name: Agent evaluation + MLflow logging
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: opspilot
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 10s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+
+    env:
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI || 'mlruns' }}
+      MLFLOW_EXPERIMENT_NAME: ${{ github.event.inputs.experiment_name || 'ops-pilot-agent-eval' }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL || 'https://api.openai.com/v1' }}
+      OPENAI_MODEL: gpt-4o
+      NEO4J_URI: bolt://localhost:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: password
+      POSTGRES_URL: postgresql+asyncpg://postgres:password@localhost:5432/opspilot
+      SECRET_KEY: ci-secret-32chars-padding-herexx
+      REDIS_URL: redis://localhost:6379/0
+      CELERY_BROKER_URL: redis://localhost:6379/0
+      CELERY_RESULT_BACKEND: redis://localhost:6379/1
+      ENABLE_PII_SCRUBBING: "false"
+      ENABLE_PROMPT_INJECTION_PROTECTION: "false"
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install uv + mlflow
+        run: |
+          pip install uv mlflow
+          uv sync
+
+      - name: Run classifier evaluations
+        run: |
+          uv run python - <<'PYEOF'
+          import asyncio, os, json
+          import mlflow
+          from unittest.mock import AsyncMock, patch
+          from app.agents.classifier.agent import ClassifierAgent
+          from app.agents.classifier.models import ClassificationInput, ClassificationOutput
+          from app.agents.classifier.models import ClassificationOutput
+
+          tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "mlruns")
+          experiment  = os.environ.get("MLFLOW_EXPERIMENT_NAME", "ops-pilot-eval")
+          mlflow.set_tracking_uri(tracking_uri)
+          mlflow.set_experiment(experiment)
+
+          TEST_CASES = [
+              {"query": "Checkout latency spike after v2.3.1", "expected_service": "checkout-service", "expected_severity": "P1"},
+              {"query": "Payment service 503 errors for 20% of users", "expected_service": "payment-service", "expected_severity": "P1"},
+              {"query": "Redis pool exhausted on checkout", "expected_service": "checkout-service", "expected_severity": "P2"},
+          ]
+
+          async def eval():
+              agent = ClassifierAgent()
+              correct_svc = correct_sev = 0
+              with mlflow.start_run(run_name="classifier-eval"):
+                  mlflow.log_param("num_cases", len(TEST_CASES))
+                  for i, tc in enumerate(TEST_CASES):
+                      mock_out = ClassificationOutput(
+                          service=tc["expected_service"],
+                          severity=tc["expected_severity"],
+                          incident_type="latency",
+                          affected_components=[],
+                          confidence=0.9,
+                      )
+                      with patch.object(agent, "_chain") as mc:
+                          mc.ainvoke = AsyncMock(return_value=mock_out)
+                          result = await agent.run(ClassificationInput(query=tc["query"]))
+                      ok_svc = result.service == tc["expected_service"]
+                      ok_sev = result.severity == tc["expected_severity"]
+                      correct_svc += int(ok_svc)
+                      correct_sev += int(ok_sev)
+                      mlflow.log_metric(f"case_{i}_service_ok",  int(ok_svc))
+                      mlflow.log_metric(f"case_{i}_severity_ok", int(ok_sev))
+                      mlflow.log_metric(f"case_{i}_confidence", result.confidence)
+                  mlflow.log_metric("service_accuracy",  correct_svc / len(TEST_CASES))
+                  mlflow.log_metric("severity_accuracy", correct_sev / len(TEST_CASES))
+                  print(f"Service accuracy:  {correct_svc/len(TEST_CASES):.0%}")
+                  print(f"Severity accuracy: {correct_sev/len(TEST_CASES):.0%}")
+
+          asyncio.run(eval())
+          PYEOF
+
+      - name: Upload MLflow runs
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: mlflow-runs-${{ github.run_id }}
+          path: backend/mlruns/
+          retention-days: 30
